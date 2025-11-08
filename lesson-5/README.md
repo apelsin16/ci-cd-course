@@ -1,65 +1,63 @@
-## 🛠️ Опис Модулів
+# 🚀 Lesson 7: Професійний Деплой Django в AWS EKS за допомогою Terraform та Helm
 
-| Модуль | Опис | Створені Ресурси |
-| :--- | :--- | :--- |
-| **s3-backend** | Налаштовує **віддалене сховище** для state-файлів. | S3 Bucket з версіонуванням та DynamoDB Table для **блокування** (state locking). |
-| **vpc** | Створює повноцінну **мережеву інфраструктуру**. | VPC (10.0.0.0/16), 3 Публічні підмережі, 3 Приватні підмережі, Internet Gateway (IGW), 3 NAT Gateways (для приватних підмереж), Route Tables. |
-| **ecr** | Створює **репозиторій** для Docker-образів. | ECR Repository з увімкненим автоматичним **скануванням образів** при завантаженні (`scan_on_push`). |
+Цей проєкт демонструє повний цикл **Infrastructure as Code (IaC)** та **GitOps** для розгортання контейнеризованого Django-застосунку в керованому кластері Kubernetes (AWS EKS).
 
-## ▶️ Команди для Запуску
+---
 
-**УВАГА:** Перед запуском **ОБОВ'ЯЗКОВО** замініть плейсхолдер `"my-unique-bucket-name-lesson5"` на унікальне ім'я у файлах `main.tf` та `backend.tf`.
+## 1. ⚙️ Огляд та Технологічний Стек
 
-1.  **Ініціалізація та Завантаження Провайдерів/Модулів**
+* **Мета:** Створити кластер EKS, налаштувати ECR та розгорнути Django-застосунок, використовуючи Helm Chart.
+* **Інфраструктура:** **AWS EKS**, **AWS ECR**, **AWS VPC**.
+* **IaC:** **Terraform** (для EKS, ECR, IAM, S3 Backend).
+* **Оркестрація:** **Helm Chart** (Deployment, Service LoadBalancer, HPA, ConfigMap).
+* **Застосунок:** **Django** (працює на SQLite для цього розгортання).
 
-    Якщо ви запускаєте вперше і потрібно створити бекенд ресурси (S3/DynamoDB), **тимчасово видаліть або закоментуйте вміст `backend.tf`**, запустіть `init`, `apply`, а потім поверніть `backend.tf` і виконайте `init` ще раз.
+---
 
-    ```bash
-    # Ініціалізація, завантаження модулів та налаштування бекенду
-    terraform init
-    ```
+## 2. ✅ Критерії Прийняття
 
-2.  **Перевірка Плану**
+| Критерій | Статус |
+| :--- | :--- |
+| **1. Кластер EKS** | Створений через Terraform і функціонує. |
+| **2. ECR** | Створений і містить завантажений образ `django-app:v1.0.1`. |
+| **3. Helm Chart** | Deployment, Service (LoadBalancer), HPA та ConfigMap успішно розгорнуті. |
+| **4. ConfigMap** | Змінні середовища (`SECRET_KEY`, `ALLOWED_HOSTS`) успішно передано. |
+| **5. Проєкт працює** | Застосунок доступний через LoadBalancer. |
 
-    Переглянути, які ресурси будуть створені.
+---
 
-    ```bash
-    terraform plan
-    ```
+## 3. 🚀 Інструкція з Розгортання
 
-3.  **Застосування Змін**
+Виконайте ці кроки з кореневого каталогу проєкту (`lesson-5/`):
 
-    Створити інфраструктуру в AWS.
+### 3.1. Створення Інфраструктури (EKS)
 
-    ```bash
-    terraform apply
-    ```
-
-4.  **Видалення Інфраструктури**
-
-    Повне видалення всіх створених ресурсів.
-
-    ```bash
-    terraform destroy
-    ```
-# Lesson 7: EKS Cluster Deployment (Terraform, ECR, Helm)
-
-Цей проєкт містить інфраструктурний код (Terraform) та конфігурацію розгортання (Helm Chart) для розміщення Django-застосунку в кластері AWS EKS.
-
-## 1. Стек Технологій
-* **Інфраструктура:** AWS EKS, ECR, VPC, S3/DynamoDB (для Terraform State)
-* **IaC:** Terraform
-* **Оркестрація:** Kubernetes (EKS)
-* **Деплоймент:** Helm
-
-## 2. Попередні Умови
-* AWS CLI налаштований та автентифікований.
-* `kubectl`, `helm`, `docker` встановлені.
-* Створено таблицю DynamoDB `terraform-locks` вручну (для коректної роботи бекенду).
-
-## 3. Кроки для Розгортання
-
-### Крок 3.1. Ініціалізація та Деплой Інфраструктури
 ```bash
+# Ініціалізація Terraform
 terraform init
-terraform apply
+
+# Створення EKS кластера, ECR та IAM ролей
+terraform apply --auto-approve
+
+# Налаштування kubectl (використовуйте свій регіон)
+aws eks update-kubeconfig --name django-k8s-cluster --region us-west-2
+
+# 1. Побудова образу (використовує виправлений settings.py)
+docker build -t django-app:v1.0.1 ./django
+
+# 2. Завантаження образу до ECR (змініть Account ID)
+docker tag django-app:v1.0.1 [803238624325.dkr.ecr.us-west-2.amazonaws.com/lesson-5-ecr:v1.0.1](https://803238624325.dkr.ecr.us-west-2.amazonaws.com/lesson-5-ecr:v1.0.1)
+docker push [803238624325.dkr.ecr.us-west-2.amazonaws.com/lesson-5-ecr:v1.0.1](https://803238624325.dkr.ecr.us-west-2.amazonaws.com/lesson-5-ecr:v1.0.1)
+
+# Оновлення та розгортання Helm Chart
+helm upgrade --install django-app ./charts/django-app/
+
+# Отримання зовнішньої адреси LoadBalancer
+kubectl get svc django-app -w
+# Використовуйте отриманий EXTERNAL-IP (DNS Name) для доступу.
+
+# Видалення застосунку з Kubernetes
+helm uninstall django-app
+
+# Видалення всієї інфраструктури AWS
+terraform destroy --auto-approve
