@@ -42,3 +42,24 @@
     ```bash
     terraform destroy
     ```
+# Lesson 7: EKS Cluster Deployment (Terraform, ECR, Helm)
+
+Цей проєкт містить інфраструктурний код (Terraform) та конфігурацію розгортання (Helm Chart) для розміщення Django-застосунку в кластері AWS EKS.
+
+## 1. Стек Технологій
+* **Інфраструктура:** AWS EKS, ECR, VPC, S3/DynamoDB (для Terraform State)
+* **IaC:** Terraform
+* **Оркестрація:** Kubernetes (EKS)
+* **Деплоймент:** Helm
+
+## 2. Попередні Умови
+* AWS CLI налаштований та автентифікований.
+* `kubectl`, `helm`, `docker` встановлені.
+* Створено таблицю DynamoDB `terraform-locks` вручну (для коректної роботи бекенду).
+
+## 3. Кроки для Розгортання
+
+### Крок 3.1. Ініціалізація та Деплой Інфраструктури
+```bash
+terraform init
+terraform apply

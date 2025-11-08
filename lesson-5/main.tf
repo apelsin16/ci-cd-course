@@ -40,3 +40,17 @@ module "ecr" {
   scan_on_push = true
   account_id   = data.aws_caller_identity.current.account_id
 }
+
+# Підключаємо модуль EKS
+module "eks" {
+  source                 = "./modules/eks"
+  cluster_name           = "django-k8s-cluster"
+  vpc_id                 = module.vpc.vpc_id # Припускаємо, що vpc.tf виводить vpc_id
+  public_subnet_ids      = module.vpc.public_subnet_ids # Припускаємо, що vpc.tf виводить public_subnet_ids
+  private_subnet_ids     = module.vpc.private_subnet_ids # Припускаємо, що vpc.tf виводить private_subnet_ids
+  instance_type          = "t3.medium"
+  desired_size           = 2
+  max_size               = 4
+  min_size               = 1
+  region                 = "us-west-2"
+}

@@ -1,0 +1,30 @@
+replicaCount: 2 # Базова кількість подів
+
+image:
+  # !!! ВИКОРИСТОВУЙТЕ ВАШ ПОВНИЙ URL ECR !!!
+  # Account ID: 803238624325, Регіон: us-west-2, Репозиторій: lesson-5-ecr
+  repository: "803238624325.dkr.ecr.us-west-2.amazonaws.com/lesson-5-ecr" 
+  tag: "v1.0.1"
+  pullPolicy: IfNotPresent
+
+service:
+  type: LoadBalancer # Тип для зовнішнього доступу з AWS
+  port: 80           # Зовнішній порт LoadBalancer
+  targetPort: 8000   # Порт Gunicorn всередині контейнера (визначений у Dockerfile)
+
+config:
+  name: django-app-config
+  environmentVariables:
+    SECRET_KEY: "django-insecure-i-l9b6thb-4iv@$#fvps%ee588$%3=7(%d(2r@@@((#q&wgg1k"
+    DEBUG: "False"
+    ALLOWED_HOSTS: "*" # Дозволити доступ з LoadBalancer
+    
+    # Інші можливі змінні, які ви використовували:
+    # STATIC_ROOT: "/vol/static"
+    # LOG_LEVEL: "INFO"
+    
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
