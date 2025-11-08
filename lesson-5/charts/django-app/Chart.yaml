@@ -1,0 +1,6 @@
+apiVersion: v2 # Рекомендована версія API для сучасних Chart'ів
+name: django-app
+description: A Helm chart for deploying a Django application on Kubernetes (EKS).
+type: application
+version: 0.1.0 # Версія самого Helm Chart (може бути змінена пізніше)
+appVersion: "latest" # Версія застосунку (опціонально, тут посилається на tag образу)
