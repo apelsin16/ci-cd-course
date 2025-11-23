@@ -1,3 +1,4 @@
+/*
 output "s3_bucket_url" {
   description = "URL S3 бакета для state файлів"
   value       = "s3://${module.s3_backend.s3_bucket_id}/"
@@ -7,6 +8,7 @@ output "dynamodb_lock_table" {
   description = "Назва DynamoDB таблиці для state-locking"
   value       = module.s3_backend.dynamodb_table_name
 }
+*/
 
 output "vpc_id" {
   description = "ID створеного VPC"

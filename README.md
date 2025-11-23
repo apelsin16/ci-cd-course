@@ -1,63 +1,70 @@
-# 🚀 Lesson 7: Професійний Деплой Django в AWS EKS за допомогою Terraform та Helm
+# Lesson 8-9: Повний CI/CD з Jenkins + Helm + Argo CD (GitOps)
 
-Цей проєкт демонструє повний цикл **Infrastructure as Code (IaC)** та **GitOps** для розгортання контейнеризованого Django-застосунку в керованому кластері Kubernetes (AWS EKS).
+**Студент:** apelsin16  
+**Гілка:** `lesson-8-9`
 
----
-
-## 1. ⚙️ Огляд та Технологічний Стек
-
-* **Мета:** Створити кластер EKS, налаштувати ECR та розгорнути Django-застосунок, використовуючи Helm Chart.
-* **Інфраструктура:** **AWS EKS**, **AWS ECR**, **AWS VPC**.
-* **IaC:** **Terraform** (для EKS, ECR, IAM, S3 Backend).
-* **Оркестрація:** **Helm Chart** (Deployment, Service LoadBalancer, HPA, ConfigMap).
-* **Застосунок:** **Django** (працює на SQLite для цього розгортання).
-
----
-
-## 2. ✅ Критерії Прийняття
-
-| Критерій | Статус |
-| :--- | :--- |
-| **1. Кластер EKS** | Створений через Terraform і функціонує. |
-| **2. ECR** | Створений і містить завантажений образ `django-app:v1.0.1`. |
-| **3. Helm Chart** | Deployment, Service (LoadBalancer), HPA та ConfigMap успішно розгорнуті. |
-| **4. ConfigMap** | Змінні середовища (`SECRET_KEY`, `ALLOWED_HOSTS`) успішно передано. |
-| **5. Проєкт працює** | Застосунок доступний через LoadBalancer. |
-
----
-
-## 3. 🚀 Інструкція з Розгортання
-
-Виконайте ці кроки з кореневого каталогу проєкту (`lesson-5/`):
-
-### 3.1. Створення Інфраструктури (EKS)
+## Схема CI/CD
+git push → Jenkins → Kaniko → ECR (lesson-8-ecr) → git push у цей же репозиторій (оновлення charts/django-app/values.yaml) → Argo CD → автоматичний деплой у EKS
+text## Як запустити інфраструктуру (Terraform)
 
 ```bash
-# Ініціалізація Terraform
+# Клонуємо репозиторій і переходимо в гілку
+git clone https://github.com/apelsin16/ci-cd-course.git
+cd ci-cd-course
+git checkout lesson-8-9
+
+# Запускаємо всю інфраструктуру
 terraform init
+terraform apply -auto-approve
+Після ~10 хвилин буде готово:
 
-# Створення EKS кластера, ECR та IAM ролей
-terraform apply --auto-approve
+EKS кластер
+Jenkins (з LoadBalancer)
+Argo CD (з LoadBalancer)
+ECR репозиторій lesson-8-ecr
 
-# Налаштування kubectl (використовуйте свій регіон)
-aws eks update-kubeconfig --name django-k8s-cluster --region us-west-2
+Як перевірити Jenkins job
 
-# 1. Побудова образу (використовує виправлений settings.py)
-docker build -t django-app:v1.0.1 ./django
+Отримай URL Jenkins:Bashkubectl get svc jenkins -n jenkins
+# або
+echo "http://$(kubectl get svc jenkins -n jenkins -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'):8080"
+Зайди в браузер:
+Логін: admin
+Пароль: admin123
 
-# 2. Завантаження образу до ECR (змініть Account ID)
-docker tag django-app:v1.0.1 [803238624325.dkr.ecr.us-west-2.amazonaws.com/lesson-5-ecr:v1.0.1](https://803238624325.dkr.ecr.us-west-2.amazonaws.com/lesson-5-ecr:v1.0.1)
-docker push [803238624325.dkr.ecr.us-west-2.amazonaws.com/lesson-5-ecr:v1.0.1](https://803238624325.dkr.ecr.us-west-2.amazonaws.com/lesson-5-ecr:v1.0.1)
+Створи Pipeline job:
+Name: django-ci-cd
+Pipeline → Definition: Pipeline script from SCM
+SCM: Git
+Repository URL: https://github.com/apelsin16/ci-cd-course.git
+Branch: lesson-8-9
+Script Path: Jenkinsfile
 
-# Оновлення та розгортання Helm Chart
-helm upgrade --install django-app ./charts/django-app/
+Натисни Build Now → дивись логи:
+Kaniko збирає і пушить образ у ECR
+Оновлюється charts/django-app/values.yaml (змінюється tag:)
+Коміт пушиться назад у цей репозиторій
 
-# Отримання зовнішньої адреси LoadBalancer
-kubectl get svc django-app -w
-# Використовуйте отриманий EXTERNAL-IP (DNS Name) для доступу.
 
-# Видалення застосунку з Kubernetes
-helm uninstall django-app
+Як побачити результат в Argo CD
 
-# Видалення всієї інфраструктури AWS
-terraform destroy --auto-approve
+Отримай URL Argo CD:Bashkubectl get svc argocd-server -n argocd
+Пароль admin:Bashkubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+Зайди в браузер → логін admin + пароль з команди вище
+Ти побачиш Application django-app:
+Status: Synced + Healthy
+Після кожного запуску Jenkins → автоматично підтягується новий образ
+URL додатка: подивись LoadBalancer сервісу django-app у namespace default
+
+
+Додаткові команди
+Bash# Переглянути логи Jenkins
+kubectl logs -n jenkins -l app.kubernetes.io/component=jenkins-master
+
+# Переглянути статус Argo CD Application
+kubectl get application django-app -n argocd
+
+# Очистити все (якщо треба)
+terraform destroy -auto-approve
+Готово!
+Повний безручний CI/CD конвеєр з Jenkins + Kaniko + ECR + Helm + Argo CD (GitOps) працює автоматично.

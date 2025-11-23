@@ -1,0 +1,50 @@
+controller:
+  serviceType: LoadBalancer
+
+  # ПРАВИЛЬНА нова синтаксис для admin
+  admin:
+    username: admin
+    password: admin123
+
+  # Зберігання
+  persistence:
+    enabled: true
+    storageClass: gp3
+    size: 10Gi
+
+  # Ресурси
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "2Gi"
+    limits:
+      cpu: "3000m"
+      memory: "4Gi"
+
+  # Вимикаємо JCasC (щоб не блокував меню)
+  JCasC:
+    configScripts: {}
+
+  # Глобальна авторизація — admin може все
+  authorizationStrategy:
+    globalMatrix:
+      permissions:
+        - "Overall/Administer:admin"
+        - "Overall/Read:anonymous"
+
+  # Плагіни — встановлюємо після старту
+  installPlugins: []
+  additionalPlugins:
+    - kubernetes:4.1.0
+    - workflow-aggregator:596.v8c21c963d92d
+    - git:5.2.1
+    - configuration-as-code:1765.v8b_0824a_3bd2
+    - credentials-binding:657.v2b_1535925880
+    - amazon-ecr:2.0.2
+
+  # Фікси для EKS
+  podAnnotations:
+    cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
+
+  # Вимикаємо проблемні init-контейнери
+  initContainer: {}

@@ -19,8 +19,8 @@ resource "aws_ecr_repository_policy" "policy" {
     Version = "2008-10-17"
     Statement = [
       {
-        Sid       = "FullAccessForAccount"
-        Effect    = "Allow"
+        Sid    = "FullAccessForAccount"
+        Effect = "Allow"
         Principal = {
           AWS = "arn:aws:iam::${var.account_id}:root"
         }

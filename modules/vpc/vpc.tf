@@ -45,7 +45,7 @@ resource "aws_subnet" "private" {
 
 # 5. Створення Elastic IP для NAT Gateway (по одному на AZ)
 resource "aws_eip" "nat_eip" {
-  count = length(var.public_subnets)
+  count  = length(var.public_subnets)
   domain = "vpc"
 
   tags = {

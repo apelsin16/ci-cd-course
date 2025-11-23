@@ -4,6 +4,14 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.0"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.12"
+    }
   }
 }
 
@@ -15,12 +23,14 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 # Підключаємо модуль S3 та DynamoDB
+/*
 module "s3_backend" {
   source      = "./modules/s3-backend"
-  bucket_name = "my-unique-bucket-name-lesson5" # <--- ОБОВ'ЯЗКОВО ЗАМІНИТИ
+  bucket_name = "my-unique-bucket-name-lesson-8-9" # <--- ОБОВ'ЯЗКОВО ЗАМІНИТИ
   table_name  = "terraform-locks"
   region      = "us-west-2"
 }
+*/
 
 # Підключаємо модуль VPC
 module "vpc" {
@@ -36,21 +46,72 @@ module "vpc" {
 # Підключаємо модуль ECR
 module "ecr" {
   source       = "./modules/ecr"
-  ecr_name     = "lesson-5-ecr"
+  ecr_name     = "lesson-8-ecr"
   scan_on_push = true
   account_id   = data.aws_caller_identity.current.account_id
 }
 
 # Підключаємо модуль EKS
 module "eks" {
-  source                 = "./modules/eks"
-  cluster_name           = "django-k8s-cluster"
-  vpc_id                 = module.vpc.vpc_id # Припускаємо, що vpc.tf виводить vpc_id
-  public_subnet_ids      = module.vpc.public_subnet_ids # Припускаємо, що vpc.tf виводить public_subnet_ids
-  private_subnet_ids     = module.vpc.private_subnet_ids # Припускаємо, що vpc.tf виводить private_subnet_ids
-  instance_type          = "t3.medium"
-  desired_size           = 2
-  max_size               = 4
-  min_size               = 1
-  region                 = "us-west-2"
+  source             = "./modules/eks"
+  cluster_name       = "django-k8s-cluster"
+  vpc_id             = module.vpc.vpc_id             # Припускаємо, що vpc.tf виводить vpc_id
+  public_subnet_ids  = module.vpc.public_subnet_ids  # Припускаємо, що vpc.tf виводить public_subnet_ids
+  private_subnet_ids = module.vpc.private_subnet_ids # Припускаємо, що vpc.tf виводить private_subnet_ids
+  instance_type      = "t3.xlarge"
+  desired_size       = 2
+  max_size           = 4
+  min_size           = 1
+  region             = "us-west-2"
 }
+
+# --- Налаштування провайдерів K8s та Helm ---
+# Вони використовують виводи (outputs) модуля EKS для автентифікації
+
+data "aws_eks_cluster_auth" "cluster" {
+  name       = module.eks.cluster_name
+  depends_on = [module.eks]
+}
+
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  token                  = data.aws_eks_cluster_auth.cluster.token
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+    token                  = data.aws_eks_cluster_auth.cluster.token
+  }
+}
+
+# --- Підключення модулів Jenkins та Argo CD ---
+
+module "jenkins" {
+  source     = "./modules/jenkins"
+  depends_on = [module.eks] # Jenkins ставиться тільки після готовності EKS
+}
+
+module "argo_cd" {
+  source     = "./modules/argo_cd"
+  depends_on = [module.eks] # ArgoCD ставиться тільки після готовності EKS
+}
+/*
+resource "kubernetes_storage_class" "gp3_default" {
+  metadata {
+    name = "gp3"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" = "true"
+    }
+  }
+  storage_provisioner    = "ebs.csi.aws.com"
+  volume_binding_mode    = "WaitForFirstConsumer"
+  allow_volume_expansion = true
+  parameters = {
+    type      = "gp3"
+    encrypted = "true"
+  }
+}
+*/
