@@ -29,3 +29,15 @@ output "ecr_repository_url" {
   description = "URL ECR репозиторію"
   value       = module.ecr.repository_url
 }
+
+# outputs.tf — для домашки з RDS
+output "db_endpoint" {
+  description = "Endpoint бази даних"
+  value       = module.rds.db_endpoint
+}
+
+output "master_password" {
+  description = "Пароль master-користувача"
+  value       = module.rds.master_password
+  sensitive   = true
+}

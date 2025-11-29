@@ -115,3 +115,19 @@ resource "kubernetes_storage_class" "gp3_default" {
   }
 }
 */
+# Тільки Aurora (найпростіше і найдешевше)
+module "rds" {
+  source = "./modules/rds"
+
+  name_prefix        = "lesson"
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+  use_aurora         = true
+  allowed_cidr_blocks = ["10.0.0.0/16"]
+}
+
+# Prometheus + Grafana
+module "monitoring" {
+  source = "./modules/monitoring"
+  depends_on = [module.eks]
+}
